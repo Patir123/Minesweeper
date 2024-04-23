@@ -15,6 +15,9 @@ public class GameManager : MonoBehaviour
 
     public static bool FirstClick = true;
     public static bool GameOver = false;
+    private static int openedCells = 0;
+    private static int cellsToOpen;
+    private static float timeForFlag = 1f;
 
     private static Grid grid;
 
@@ -43,33 +46,54 @@ public class GameManager : MonoBehaviour
         }
 
         grid = new Grid(width, height, scale, offset, numOfBombs);
+        cellsToOpen = width * height - numOfBombs;
     }
 
     private void Update() {
+        if (openedCells == cellsToOpen) GameOver = true;
+
         if (GameOver) {
             OnGameOver?.Invoke();
             gameObject.SetActive(false);
-        }
-        else if (Input.GetMouseButtonDown(0)) {
-            Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePosition, Vector2.zero);
+        } else if (Input.touchCount > 0) {
+            Touch touch = Input.GetTouch(0);
+            Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
+            RaycastHit2D hit = Physics2D.Raycast(touchPosition, Vector2.zero);
             if (hit.collider != null) {
                 GridCell clickedGridCell = hit.collider.GetComponent<GridCell>();
-                if (FirstClick) {
-                    FirstClick = false;
-                    clickedGridCell.SetCellType(CellType.Empty);
+                float timeRemaining = timeForFlag - Time.deltaTime;
 
-                    foreach (GridCell gridCell in clickedGridCell.neighbouringCells) {
-                        gridCell.SetCellType(CellType.Empty);
+                if (timeRemaining <= 0) {
+                    timeForFlag = 2f;
+                    if (clickedGridCell.flagged) {
+                        clickedGridCell.SetSprite(GameAssets.Instance.DefaultCellSprite);
+                        clickedGridCell.flagged = false;
+                    } else {
+                        clickedGridCell.SetSprite(GameAssets.Instance.FlaggedCellSprite);
+                        clickedGridCell.flagged = true;
                     }
-                    grid.SetBombs();
+                } 
+                else if (touch.phase == TouchPhase.Ended && !clickedGridCell.flagged) {
 
-                    clickedGridCell.ShowCell(new List<GridCell>());
-                } else if (clickedGridCell.GetCellType() == CellType.Bomb) {
-                    clickedGridCell.SetSprite(GameAssets.Instance.MineCellSprite);
-                    GameOver = true;
-                } else {
-                    clickedGridCell.ShowCell(new List<GridCell>());
+                    if (FirstClick) {
+                        FirstClick = false;
+                        clickedGridCell.SetCellType(CellType.Empty);
+
+                        foreach (GridCell gridCell in clickedGridCell.neighbouringCells) {
+                            gridCell.SetCellType(CellType.Empty);
+                        }
+                        grid.SetBombs();
+
+                        clickedGridCell.ShowCell(new List<GridCell>());
+                    } else if (clickedGridCell.GetCellType() == CellType.Bomb) {
+                        clickedGridCell.SetSprite(GameAssets.Instance.MineCellSprite);
+                        GameOver = true;
+                    } else {
+                        clickedGridCell.ShowCell(new List<GridCell>());
+                    }
+                }
+                else {
+                    timeForFlag -= Time.deltaTime;
                 }
             }
         }

@@ -8,6 +8,7 @@ public class GridCell : MonoBehaviour
     public int y;
     private Sprite sprite;
     [SerializeField] private CellType cellType = CellType.Default;
+    public bool flagged;
 
     public List<GridCell> neighbouringCells = new List<GridCell>();
 
@@ -40,7 +41,6 @@ public class GridCell : MonoBehaviour
                     gridCellsThatActivatedThis.Add(this);
                     foreach (GridCell neighbour in neighbouringCells) {
                         neighbour.ShowCell(gridCellsThatActivatedThis);
-                        
                     }
                 }
                 break;
