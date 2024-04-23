@@ -6,18 +6,16 @@ public class GridCell : MonoBehaviour
 {
     public int x;
     public int y;
-    private Sprite sprite;
     [SerializeField] private CellType cellType = CellType.Default;
     public bool flagged;
 
     public List<GridCell> neighbouringCells = new List<GridCell>();
 
     private void Awake() {
-        ShowCell(new List<GridCell>());
+        SetSprite(GameAssets.Instance.DefaultCellSprite);
     }
 
     public void SetSprite(Sprite sprite) {
-        this.sprite = sprite;
         GetComponent<SpriteRenderer>().sprite = sprite;
     }
 
@@ -28,12 +26,14 @@ public class GridCell : MonoBehaviour
     public CellType GetCellType() {
         return cellType;
     }
+    
+    public void InitCells() {
+        SetSprite(GameAssets.Instance.DefaultCellSprite);
+    }
 
     public void ShowCell(List<GridCell> gridCellsThatActivatedThis) {
+        GameManager.openedCells++;
         switch (cellType) {
-            case CellType.Default:
-                SetSprite(GameAssets.Instance.DefaultCellSprite);
-                break;
             case CellType.Empty:
                 SetSprite(GameAssets.Instance.ClickedCellSprite);
 

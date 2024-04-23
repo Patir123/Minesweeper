@@ -15,9 +15,9 @@ public class GameManager : MonoBehaviour
 
     public static bool FirstClick = true;
     public static bool GameOver = false;
-    private static int openedCells = 0;
+    public static int openedCells = 0;
     private static int cellsToOpen;
-    private static float timeForFlag = 1f;
+    private static float defaultTimeForFlag = .5f;
 
     private static Grid grid;
 
@@ -49,11 +49,14 @@ public class GameManager : MonoBehaviour
         cellsToOpen = width * height - numOfBombs;
     }
 
+    float timeForFlag = defaultTimeForFlag;
     private void Update() {
+        print("Opened Cells: " + openedCells + " Cells to Open: " + cellsToOpen);
         if (openedCells == cellsToOpen) GameOver = true;
 
         if (GameOver) {
             OnGameOver?.Invoke();
+            Grid.ShowAllBombs();
             gameObject.SetActive(false);
         } else if (Input.touchCount > 0) {
             Touch touch = Input.GetTouch(0);
@@ -64,7 +67,10 @@ public class GameManager : MonoBehaviour
                 float timeRemaining = timeForFlag - Time.deltaTime;
 
                 if (timeRemaining <= 0) {
-                    timeForFlag = 2f;
+                    timeForFlag = defaultTimeForFlag;
+                    if (clickedGridCell.GetCellType() == CellType.Empty) return;
+
+                    Handheld.Vibrate();
                     if (clickedGridCell.flagged) {
                         clickedGridCell.SetSprite(GameAssets.Instance.DefaultCellSprite);
                         clickedGridCell.flagged = false;
@@ -74,7 +80,7 @@ public class GameManager : MonoBehaviour
                     }
                 } 
                 else if (touch.phase == TouchPhase.Ended && !clickedGridCell.flagged) {
-
+                    timeForFlag = defaultTimeForFlag;
                     if (FirstClick) {
                         FirstClick = false;
                         clickedGridCell.SetCellType(CellType.Empty);

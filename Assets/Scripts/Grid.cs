@@ -102,6 +102,4 @@ public class Grid
             cell.SetSprite(GameAssets.Instance.MineCellSprite);
         }
     }
-
-
 }
