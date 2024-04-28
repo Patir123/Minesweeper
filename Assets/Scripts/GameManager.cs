@@ -10,8 +10,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int width;
     [SerializeField] private int height;
     [SerializeField] private float scale;
-    [SerializeField] private Vector2 offset;
     [SerializeField] private int numOfBombs;
+    [SerializeField] private GameObject gridParent;
 
     private static bool FirstClick = true;
     private static int openedCells = 0;
@@ -31,6 +31,13 @@ public class GameManager : MonoBehaviour
         StartGame();
         OnGameOver.AddListener(GameOver);
         OnGameWin.AddListener(GameWin);
+
+        if (width % 2 == 0) {
+            gridParent.transform.position = new Vector3(-width/2, -height/2) * scale +
+                new Vector3(scale/2, scale/2);
+        } else {
+            gridParent.transform.position = new Vector3(-width/2, -height/2) * scale;
+        }
     }
 
     public void StartGame() {
@@ -45,7 +52,7 @@ public class GameManager : MonoBehaviour
             openedCells = 0;
         }
 
-        grid = new Grid(width, height, scale, offset, numOfBombs);
+        grid = new Grid(width, height, scale, numOfBombs);
         cellsToOpen = width * height - numOfBombs;
     }
 

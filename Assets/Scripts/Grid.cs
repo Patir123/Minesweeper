@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Grid
 {
+    private const string GRID_PARENT = "GridParent";
+
     private int width;
     private int height;
     private float scale;
@@ -13,7 +15,7 @@ public class Grid
 
     public static Grid Instance { get; private set; }
 
-    public Grid(int width, int height, float scale, Vector2 offset, int numOfBombs) {
+    public Grid(int width, int height, float scale, int numOfBombs) {
         Instance = this;
 
         this.width = width;
@@ -26,7 +28,7 @@ public class Grid
         // Create grid
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                GridCell cell = CreateGridCell(x, y, scale, offset);
+                GridCell cell = CreateGridCell(x, y, scale);
                 cells[x, y] = cell;
             }
         }
@@ -93,20 +95,20 @@ public class Grid
         }
     }
 
-    private GridCell CreateGridCell(int x, int y, float scale, Vector2 offset) {
+    private GridCell CreateGridCell(int x, int y, float scale) {
         string name = "GridCell " + x.ToString() + " " + y.ToString();
 
-        Transform parent = GameObject.Find("GridParent").transform != null ?
-            GameObject.Find("GridParent").transform :
-            new GameObject("GridParent").transform;
+        Transform parent = GameObject.Find(GRID_PARENT).transform != null ?
+            GameObject.Find(GRID_PARENT).transform :
+            new GameObject(GRID_PARENT).transform;
 
-        Vector3 position = new Vector3(x, y) * scale + new Vector3(offset[0], offset[1]);
+        Vector3 position = new Vector3(x, y) * scale;
 
         GameObject gridCellGO = new(name);
 
         gridCellGO.transform.parent = parent;
         gridCellGO.transform.localScale = Vector3.one * scale;
-        gridCellGO.transform.position = position;
+        gridCellGO.transform.localPosition = position;
 
         GridCell gridCell = gridCellGO.AddComponent<GridCell>();
         gridCell.InitGridCell(x, y, scale);

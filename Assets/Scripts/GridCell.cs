@@ -12,14 +12,13 @@ public class GridCell : MonoBehaviour
     private bool opened;
     private bool flagged;
     
-
     private List<GridCell> neighbouringCells = new();
 
     public void InitGridCell(int x, int y, float scale) {
         this.x = x;
         this.y = y;
         this.scale = scale;
-    
+
         SetSprite(GameAssets.Instance.DefaultCellSprite);
     }
 
@@ -92,8 +91,7 @@ public class GridCell : MonoBehaviour
     }
 
     private void InitBoxCollider2D() {
-        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
-        boxCollider.size = new Vector2(1, 1);
+        GetComponent<BoxCollider2D>().size = new Vector2(1, 1);
     }
 
     public int GetX() {
