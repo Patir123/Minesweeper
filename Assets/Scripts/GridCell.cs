@@ -1,18 +1,30 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(SpriteRenderer))]
+[RequireComponent(typeof(BoxCollider2D))]
 public class GridCell : MonoBehaviour
 {
-    public int x;
-    public int y;
+    private int x;
+    private int y;
+    private float scale;
     [SerializeField] private CellType cellType = CellType.Default;
-    public bool flagged;
+    private bool opened;
+    private bool flagged;
+    
 
-    public List<GridCell> neighbouringCells = new List<GridCell>();
+    private List<GridCell> neighbouringCells = new();
+
+    public void InitGridCell(int x, int y, float scale) {
+        this.x = x;
+        this.y = y;
+        this.scale = scale;
+    
+        SetSprite(GameAssets.Instance.DefaultCellSprite);
+    }
 
     private void Awake() {
-        SetSprite(GameAssets.Instance.DefaultCellSprite);
+        InitBoxCollider2D();
     }
 
     public void SetSprite(Sprite sprite) {
@@ -26,23 +38,19 @@ public class GridCell : MonoBehaviour
     public CellType GetCellType() {
         return cellType;
     }
-    
-    public void InitCells() {
-        SetSprite(GameAssets.Instance.DefaultCellSprite);
+
+    public void ShowCell() {
+        ShowCell(new());
     }
 
     public void ShowCell(List<GridCell> gridCellsThatActivatedThis) {
-        GameManager.openedCells++;
+        if (!opened) GameManager.IncrementOpenedCells();
+        opened = true;
         switch (cellType) {
             case CellType.Empty:
                 SetSprite(GameAssets.Instance.ClickedCellSprite);
 
-                if (!gridCellsThatActivatedThis.Contains(this)) {
-                    gridCellsThatActivatedThis.Add(this);
-                    foreach (GridCell neighbour in neighbouringCells) {
-                        neighbour.ShowCell(gridCellsThatActivatedThis);
-                    }
-                }
+                ShowEmptyCellLogic(gridCellsThatActivatedThis);
                 break;
             case CellType.One:
                 SetSprite(GameAssets.Instance.OneCellSprite);
@@ -69,8 +77,50 @@ public class GridCell : MonoBehaviour
                 SetSprite(GameAssets.Instance.EightCellSprite);
                 break;
             case CellType.Bomb:
-                SetSprite(GameAssets.Instance.MineCellSprite);
+                SetSprite(GameAssets.Instance.BombCellSprite);
                 break;
         }
+    }
+
+    private void ShowEmptyCellLogic(List<GridCell> gridCellsThatActivatedThis) {
+        if (!gridCellsThatActivatedThis.Contains(this)) {
+            gridCellsThatActivatedThis.Add(this);
+            foreach (GridCell neighbour in neighbouringCells) {
+                neighbour.ShowCell(gridCellsThatActivatedThis);
+            }
+        }
+    }
+
+    private void InitBoxCollider2D() {
+        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
+        boxCollider.size = new Vector2(1, 1);
+    }
+
+    public int GetX() {
+        return x;
+    }
+
+    public int GetY() {
+        return y;
+    }
+
+    public void SetY(int y) {
+        this.y = y;
+    }
+
+    public bool IsFlagged() {
+        return flagged;
+    }
+
+    public void SetFlagged(bool flagged) {
+        this.flagged = flagged;
+    }
+
+    public List<GridCell> GetNeighbouringCells() {
+        return neighbouringCells;
+    }
+
+    public bool IsOpened() {
+        return opened;
     }
 }

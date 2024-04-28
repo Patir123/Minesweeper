@@ -1,20 +1,14 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.OnScreen;
-using UnityEngine.UI;
-using UnityEngine.Events;
-using UnityEngine.EventSystems;
 
 public class Grid
 {
-    public int width;
-    public int height;
+    private int width;
+    private int height;
     private float scale;
-    public static GridCell[,] cells;
-    public static List<GridCell> bombCells = new List<GridCell>();
-
+    private static GridCell[,] cells;
+    private static List<GridCell> bombCells = new();
+    private static List<GridCell> flagCells = new();
     private int numOfBombs;
 
     public static Grid Instance { get; private set; }
@@ -41,65 +35,102 @@ public class Grid
         foreach (GridCell cell in cells) {
             for (int x = -1; x <= 1; x++) {
                 for (int y = -1; y <= 1; y++) {
-                    if (cell.x + x >= 0 && cell.x + x < width && cell.y + y >= 0 && cell.y + y < height) {
-                        cell.neighbouringCells.Add(cells[cell.x + x, cell.y + y]);
+                    if (cell.GetX() + x >= 0 &&
+                        cell.GetX() + x < width &&
+                        cell.GetY() + y >= 0 &&
+                        cell.GetY() + y < height
+                        ) {
+                        cell.GetNeighbouringCells().Add(cells[cell.GetX() + x, cell.GetY() + y]);   //sprawdziæ czy dzia³a
                     }
                 }
             }
         }
+
+        // fill list of every cell
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                gridCellsThatCanBeBombs.Add(cells[i, j]);
+            }
+        }
+
+        bombCells.Clear();
+        flagCells.Clear();
     }
 
-    public void SetBombs() {
+    private List<GridCell> gridCellsThatCanBeBombs = new();
+    public void SetBombs(List<GridCell> gridCellsToSkip) {
+        // create list of cells that can be bombs
+        List<GridCell> gridCellsWithoutBombs = new(gridCellsThatCanBeBombs);
+        foreach (GridCell gridCell in gridCellsToSkip) {
+            gridCellsWithoutBombs.Remove(gridCell);
+        }
+
+        // set bombs
         for (int i = 0; i < numOfBombs; i++) {
-            GridCell cell = cells[Random.Range(0, width), Random.Range(0, height)];
-            if (bombCells.Contains(cell) || cell.GetCellType() == CellType.Empty) {
-                i--;
-            } else {
-                bombCells.Add(cell);
-                cell.SetCellType(CellType.Bomb);
-            }
+            int randomIndex = Random.Range(0, gridCellsWithoutBombs.Count);
+            GridCell gridCell = gridCellsWithoutBombs[randomIndex];
+            gridCellsWithoutBombs.RemoveAt(randomIndex);
+            gridCell.SetCellType(CellType.Bomb);
+            bombCells.Add(gridCell);
         }
 
         SetNumbers();
     }
 
     private void SetNumbers() {
-        for (int i = 0; i < cells.Length; i++) {
-            GridCell cell = cells[i % width, i / width];
-            if (cell.GetCellType() != CellType.Bomb) {
+        for (int x = 0; x < cells.GetLength(0); x++) {
+            for (int y = 0; y < cells.GetLength(1); y++) {
+                GridCell gridCell = cells[x, y];
+                if (gridCell.GetCellType() == CellType.Bomb) continue;
+
                 int count = 0;
-                foreach (GridCell neighbour in cell.neighbouringCells) {
-                    if (neighbour.GetCellType() == CellType.Bomb) {
-                        count++;
-                    }
+                foreach (GridCell neighbour in gridCell.GetNeighbouringCells()) {
+                    if (neighbour.GetCellType() == CellType.Bomb) count++;
                 }
-                cell.SetCellType((CellType)count);
+
+                gridCell.SetCellType((CellType)count);
             }
         }
     }
 
     private GridCell CreateGridCell(int x, int y, float scale, Vector2 offset) {
         string name = "GridCell " + x.ToString() + " " + y.ToString();
-        GameObject cell = new GameObject(name, typeof(SpriteRenderer));
-        cell.transform.parent = GameObject.Find("GridParent").transform;
 
-        cell.transform.position = new Vector3(x, y) * scale + new Vector3(offset[0], offset[1]);
-        cell.transform.localScale = Vector3.one * scale;
+        Transform parent = GameObject.Find("GridParent").transform != null ?
+            GameObject.Find("GridParent").transform :
+            new GameObject("GridParent").transform;
 
-        GridCell gridCell = cell.AddComponent<GridCell>();
-        gridCell.x = x;
-        gridCell.y = y;
+        Vector3 position = new Vector3(x, y) * scale + new Vector3(offset[0], offset[1]);
 
-        cell.AddComponent<BoxCollider2D>();
+        GameObject gridCellGO = new(name);
 
-        GameManager.gridCells.Add(gridCell);
+        gridCellGO.transform.parent = parent;
+        gridCellGO.transform.localScale = Vector3.one * scale;
+        gridCellGO.transform.position = position;
 
+        GridCell gridCell = gridCellGO.AddComponent<GridCell>();
+        gridCell.InitGridCell(x, y, scale);
+
+        GameManager.GetGridCells().Add(gridCell);
         return gridCell;
     }
 
     public static void ShowAllBombs() {
         foreach (GridCell cell in bombCells) {
-            cell.SetSprite(GameAssets.Instance.MineCellSprite);
+            if (cell.IsFlagged()) cell.SetSprite(GameAssets.Instance.CorrectBombCellSprite);
+            else cell.ShowCell();
         }
+
+        foreach (GridCell cell in flagCells) {
+            if (cell.GetCellType() != CellType.Bomb) cell.SetSprite(GameAssets.Instance.WrongFlagCellSprite);
+        }
+    }
+
+    public static void AddFlagCell(GridCell gridCell) {
+        flagCells.Add(gridCell);
+    }
+
+    public static void RemoveFlagCell(GridCell gridCell) {
+        flagCells.Remove(gridCell);
     }
 }

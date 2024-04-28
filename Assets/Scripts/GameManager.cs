@@ -1,11 +1,11 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class GameManager : MonoBehaviour
 {
-    public static UnityEvent OnGameOver = new UnityEvent();
+    public static UnityEvent OnGameOver = new();
+    public static UnityEvent OnGameWin = new();
 
     [SerializeField] private int width;
     [SerializeField] private int height;
@@ -13,17 +13,15 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Vector2 offset;
     [SerializeField] private int numOfBombs;
 
-    public static bool FirstClick = true;
-    public static bool GameOver = false;
-    public static int openedCells = 0;
+    private static bool FirstClick = true;
+    private static int openedCells = 0;
     private static int cellsToOpen;
-    private static float defaultTimeForFlag = .5f;
-
     private static Grid grid;
 
-    public static List<GridCell> gridCells = new List<GridCell>();
-
+    private static List<GridCell> gridCells = new();
     public static GameManager Instance { get; private set; }
+
+    private const float Default_Time_For_Flag = .5f;
 
     private void Awake() {
         Instance = this;
@@ -31,10 +29,11 @@ public class GameManager : MonoBehaviour
 
     private void Start() {
         StartGame();
+        OnGameOver.AddListener(GameOver);
+        OnGameWin.AddListener(GameWin);
     }
 
     public void StartGame() {
-        GameOver = false;
         FirstClick = true;
 
         if (grid != null) {
@@ -43,22 +42,17 @@ public class GameManager : MonoBehaviour
             }
 
             gridCells.Clear();
+            openedCells = 0;
         }
 
         grid = new Grid(width, height, scale, offset, numOfBombs);
         cellsToOpen = width * height - numOfBombs;
     }
 
-    float timeForFlag = defaultTimeForFlag;
+    float timeForFlag = Default_Time_For_Flag;
+    private bool placedAFlagInThisHolding = false;
     private void Update() {
-        print("Opened Cells: " + openedCells + " Cells to Open: " + cellsToOpen);
-        if (openedCells == cellsToOpen) GameOver = true;
-
-        if (GameOver) {
-            OnGameOver?.Invoke();
-            Grid.ShowAllBombs();
-            gameObject.SetActive(false);
-        } else if (Input.touchCount > 0) {
+        if (Input.touchCount > 0) {
             Touch touch = Input.GetTouch(0);
             Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
             RaycastHit2D hit = Physics2D.Raycast(touchPosition, Vector2.zero);
@@ -66,43 +60,77 @@ public class GameManager : MonoBehaviour
                 GridCell clickedGridCell = hit.collider.GetComponent<GridCell>();
                 float timeRemaining = timeForFlag - Time.deltaTime;
 
-                if (timeRemaining <= 0) {
-                    timeForFlag = defaultTimeForFlag;
-                    if (clickedGridCell.GetCellType() == CellType.Empty) return;
+                if (timeRemaining <= 0 && !placedAFlagInThisHolding) {
+                    timeForFlag = Default_Time_For_Flag;
+                    placedAFlagInThisHolding = true;
+                    if (clickedGridCell.IsOpened()) return;
 
                     Handheld.Vibrate();
-                    if (clickedGridCell.flagged) {
-                        clickedGridCell.SetSprite(GameAssets.Instance.DefaultCellSprite);
-                        clickedGridCell.flagged = false;
+                    if (clickedGridCell.IsFlagged()) {
+                        Sprite defaultCellSprite = GameAssets.Instance.DefaultCellSprite;
+                        clickedGridCell.SetSprite(defaultCellSprite);
+                        clickedGridCell.SetFlagged(false);
+                        Grid.RemoveFlagCell(clickedGridCell);
                     } else {
-                        clickedGridCell.SetSprite(GameAssets.Instance.FlaggedCellSprite);
-                        clickedGridCell.flagged = true;
+                        Sprite flagCellSprite = GameAssets.Instance.FlaggedCellSprite;
+                        clickedGridCell.SetSprite(flagCellSprite);
+                        clickedGridCell.SetFlagged(true);
+                        Grid.AddFlagCell(clickedGridCell);
                     }
                 } 
-                else if (touch.phase == TouchPhase.Ended && !clickedGridCell.flagged) {
-                    timeForFlag = defaultTimeForFlag;
+                else if (touch.phase == TouchPhase.Ended && !clickedGridCell.IsFlagged() && !placedAFlagInThisHolding) {
+                    timeForFlag = Default_Time_For_Flag;
                     if (FirstClick) {
                         FirstClick = false;
+                        
+                        List<GridCell> gridCellsToSkipWhenSettingBombs = new();
+
                         clickedGridCell.SetCellType(CellType.Empty);
+                        gridCellsToSkipWhenSettingBombs.Add(clickedGridCell);
 
-                        foreach (GridCell gridCell in clickedGridCell.neighbouringCells) {
+                        // open neighbouring cells (set them empty)
+                        foreach (GridCell gridCell in clickedGridCell.GetNeighbouringCells()) {
                             gridCell.SetCellType(CellType.Empty);
+                            gridCellsToSkipWhenSettingBombs.Add(gridCell);
                         }
-                        grid.SetBombs();
+                        grid.SetBombs(gridCellsToSkipWhenSettingBombs);
 
-                        clickedGridCell.ShowCell(new List<GridCell>());
+                        clickedGridCell.ShowCell();
                     } else if (clickedGridCell.GetCellType() == CellType.Bomb) {
-                        clickedGridCell.SetSprite(GameAssets.Instance.MineCellSprite);
-                        GameOver = true;
+                        Sprite bombCellSprite = GameAssets.Instance.BombCellSprite;
+                        clickedGridCell.SetSprite(bombCellSprite);
+                        OnGameOver?.Invoke();
                     } else {
-                        clickedGridCell.ShowCell(new List<GridCell>());
+                        clickedGridCell.ShowCell();
                     }
                 }
                 else {
                     timeForFlag -= Time.deltaTime;
                 }
             }
+        } else if (Input.touchCount == 0) {
+            placedAFlagInThisHolding = false;
+            timeForFlag = Default_Time_For_Flag;
         }
+
+        if (openedCells == cellsToOpen) OnGameWin?.Invoke();
+    }
+
+    private void GameOver() {
+        Grid.ShowAllBombs();
+        gameObject.SetActive(false);
+    }
+
+    private void GameWin() {
+        gameObject.SetActive(false);
+    }
+
+    public static void IncrementOpenedCells() {
+        openedCells++;
+    }
+
+    public static List<GridCell> GetGridCells() {
+        return gridCells;
     }
 }
 

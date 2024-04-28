@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class GameAssets : MonoBehaviour
@@ -13,7 +11,9 @@ public class GameAssets : MonoBehaviour
     public Sprite DefaultCellSprite;
     public Sprite ClickedCellSprite;
     public Sprite FlaggedCellSprite;
-    public Sprite MineCellSprite;
+    public Sprite WrongFlagCellSprite;
+    public Sprite BombCellSprite;
+    public Sprite CorrectBombCellSprite;
     public Sprite OneCellSprite;
     public Sprite TwoCellSprite;
     public Sprite ThreeCellSprite;
