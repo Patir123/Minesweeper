@@ -42,7 +42,7 @@ public class Grid
                         cell.GetY() + y >= 0 &&
                         cell.GetY() + y < height
                         ) {
-                        cell.GetNeighbouringCells().Add(cells[cell.GetX() + x, cell.GetY() + y]);   //sprawdziæ czy dzia³a
+                        cell.GetNeighbouringCells().Add(cells[cell.GetX() + x, cell.GetY() + y]);
                     }
                 }
             }
